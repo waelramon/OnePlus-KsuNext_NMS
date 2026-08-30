@@ -27,7 +27,7 @@ Every release contains **two things**. Flash the kernel first, then add NoMount 
 |  | 1️⃣ The kernel — *built here* | 2️⃣ NoMount Suite — *the add-on* |
 |---|---|---|
 | **What it is** | AnyKernel3 ZIP (`AK3_<device>_…zip`) with `KernelSU Next` root and `CONFIG_NOMOUNT=y` compiled in | `00_NoMount-Module-vX.Y.Z.zip` — the metamodule that switches NoMount **on** |
-| **Where it comes from** | This repo's GitHub Actions — one ZIP per device | The separate **[NoMount project](https://github.com/maxsteeel/nomount)** — attached to each release as an add-on (sorted to the top of the Assets list) |
+| **Where it comes from** | This repo's GitHub Actions — one ZIP per device | The separate **[NoMount Suite](https://github.com/Bouteillepleine/NoMount-Suite)** — attached to each release as an add-on (sorted to the top of the Assets list) |
 | **How you install it** | Flash with **Kernel Flasher** or **KernelSU Next Manager** | **KernelSU Next Manager → Modules → Install from storage** |
 | **Get it now** | [⬇️ Latest release](https://github.com/Bouteillepleine/OnePlus-KsuNext_NMS/releases/latest) | [⬇️ Latest release](https://github.com/Bouteillepleine/OnePlus-KsuNext_NMS/releases/latest) — it's at the top of the Assets list |
 
@@ -49,16 +49,18 @@ Most hiding solutions **mount** something — an `overlayfs` or bind mount — t
 
 <table>
   <tr>
-    <td align="center"><a href="https://github.com/Bouteillepleine/OnePlus-KsuNext_NMS/blob/NoMount/docs/screenshots/status.jpg"><img src="https://raw.githubusercontent.com/Bouteillepleine/OnePlus-KsuNext_NMS/NoMount/docs/screenshots/status.jpg" width="185" alt="Status"></a></td>
-    <td align="center"><a href="https://github.com/Bouteillepleine/OnePlus-KsuNext_NMS/blob/NoMount/docs/screenshots/modules.jpg"><img src="https://raw.githubusercontent.com/Bouteillepleine/OnePlus-KsuNext_NMS/NoMount/docs/screenshots/modules.jpg" width="185" alt="Modules"></a></td>
-    <td align="center"><a href="https://github.com/Bouteillepleine/OnePlus-KsuNext_NMS/blob/NoMount/docs/screenshots/rules.jpg"><img src="https://raw.githubusercontent.com/Bouteillepleine/OnePlus-KsuNext_NMS/NoMount/docs/screenshots/rules.jpg" width="185" alt="Rules"></a></td>
-    <td align="center"><a href="https://github.com/Bouteillepleine/OnePlus-KsuNext_NMS/blob/NoMount/docs/screenshots/check.jpg"><img src="https://raw.githubusercontent.com/Bouteillepleine/OnePlus-KsuNext_NMS/NoMount/docs/screenshots/check.jpg" width="185" alt="Check"></a></td>
+    <td align="center"><a href="https://github.com/Bouteillepleine/OnePlus-KsuNext_NMS/blob/NoMount/docs/screenshots/status.jpg"><img src="https://raw.githubusercontent.com/Bouteillepleine/OnePlus-KsuNext_NMS/NoMount/docs/screenshots/status.jpg" width="155" alt="Status"></a></td>
+    <td align="center"><a href="https://github.com/Bouteillepleine/OnePlus-KsuNext_NMS/blob/NoMount/docs/screenshots/modules.jpg"><img src="https://raw.githubusercontent.com/Bouteillepleine/OnePlus-KsuNext_NMS/NoMount/docs/screenshots/modules.jpg" width="155" alt="Modules"></a></td>
+    <td align="center"><a href="https://github.com/Bouteillepleine/OnePlus-KsuNext_NMS/blob/NoMount/docs/screenshots/rules.jpg"><img src="https://raw.githubusercontent.com/Bouteillepleine/OnePlus-KsuNext_NMS/NoMount/docs/screenshots/rules.jpg" width="155" alt="Rules"></a></td>
+    <td align="center"><a href="https://github.com/Bouteillepleine/OnePlus-KsuNext_NMS/blob/NoMount/docs/screenshots/check.jpg"><img src="https://raw.githubusercontent.com/Bouteillepleine/OnePlus-KsuNext_NMS/NoMount/docs/screenshots/check.jpg" width="155" alt="Check"></a></td>
+    <td align="center"><a href="https://github.com/Bouteillepleine/OnePlus-KsuNext_NMS/blob/NoMount/docs/screenshots/duckdetector.jpg"><img src="https://raw.githubusercontent.com/Bouteillepleine/OnePlus-KsuNext_NMS/NoMount/docs/screenshots/duckdetector.jpg" width="155" alt="Duck Detector"></a></td>
   </tr>
   <tr>
     <td align="center"><sub><b>Status</b><br>zero mounts, live counts</sub></td>
     <td align="center"><sub><b>Modules</b><br>what is served, and how</sub></td>
     <td align="center"><sub><b>Rules</b><br>per-module rule breakdown</sub></td>
     <td align="center"><sub><b>Check</b><br>one diagnostic, plain verdicts</sub></td>
+    <td align="center"><sub><b>Duck Detector</b><br>0 danger, 0 warning</sub></td>
   </tr>
 </table>
 
@@ -118,7 +120,7 @@ configs/
 
 **Do I really need the module?** Yes. The kernel ships NoMount **dormant**; NoMount Suite activates it. No Suite → no hiding.
 
-**Where does the module come from?** It's a **separate add-on**, maintained in the [NoMount project](https://github.com/maxsteeel/nomount) and attached to each release as `00_NoMount-Module-vX.Y.Z.zip` (named to sort to the top of the Assets).
+**Where does the module come from?** It's a **separate add-on**, maintained in the [NoMount Suite](https://github.com/Bouteillepleine/NoMount-Suite) and attached to each release as `00_NoMount-Module-vX.Y.Z.zip` (named to sort to the top of the Assets).
 
 **Can I keep my current kernel and just flash the module?** No — NoMount must be compiled into the kernel (`CONFIG_NOMOUNT=y`). Use the kernel from this release.
 
@@ -147,7 +149,7 @@ Root option:
 ## 🔗 Links
 
 - [KernelSU Next](https://github.com/KernelSU-Next/KernelSU-Next) · [KernelSU Next Manager releases](https://github.com/KernelSU-Next/KernelSU-Next/releases)
-- [NoMount](https://github.com/maxsteeel/nomount) — the hiding add-on
+- [NoMount Suite](https://github.com/Bouteillepleine/NoMount-Suite) — the hiding add-on
 - [Kernel Flasher](https://github.com/fatalcoder524/KernelFlasher)
 - [Releases](https://github.com/Bouteillepleine/OnePlus-KsuNext_NMS/releases)
 
@@ -162,7 +164,7 @@ Any and all donations are appreciated!
 
 ## 🤝 Acknowledgments
 
-- **[maxsteeel/nomount](https://github.com/maxsteeel/nomount)** &amp; all contributors — NoMount development 🙌
+- **[NoMount Suite](https://github.com/Bouteillepleine/NoMount-Suite)** &amp; all contributors — NoMount development 🙌 (built on **[maxsteeel/nomount](https://github.com/maxsteeel/nomount)**)
 - **KernelSU Next** — the root solution
 - **AnyKernel3** by osm0sis and contributors
 - **[WildKernels/OnePlus_KernelSU_SUSFS](https://github.com/WildKernels/OnePlus_KernelSU_SUSFS)** — the excellent OnePlus build framework this is forked from
@@ -176,4 +178,4 @@ Any and all donations are appreciated!
 
 Kernel source comes from **OnePlusOSS** (GPL-2.0); the build framework is forked from
 **[WildKernels/OnePlus_KernelSU_SUSFS](https://github.com/WildKernels/OnePlus_KernelSU_SUSFS)**.
-The **NoMount Suite** add-on is a separate project — see [maxsteeel/nomount](https://github.com/maxsteeel/nomount) for its own license.
+The **NoMount Suite** add-on is a separate project — see [NoMount Suite](https://github.com/Bouteillepleine/NoMount-Suite) for its own license.

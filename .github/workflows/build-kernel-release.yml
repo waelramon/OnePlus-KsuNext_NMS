@@ -75,10 +75,10 @@ on:
         type: boolean
         default: false
       nomount_ref:
-        description: 'nomount branch/ref for the Prism engine src + patches (default suite; set e.g. test/sprivate to validate a branch before merge). The engine lives in the Suite repo now, not kbuild@hookless.'
+        description: 'NoMount-Suite branch/ref for the Prism engine src + patches (default main; set a branch to validate it before it is released). The engine ships inside the Suite repo, under hookless/.'
         required: false
         type: string
-        default: suite
+        default: main
       patches_ref:
         description: 'kernel_patches branch/ref for the _ghost/_hook/_pathhide cloaks and the apply script (default main; set a branch to validate before merge)'
         required: false
@@ -264,7 +264,7 @@ jobs:
           active_gki_keys_csv=$(IFS=','; echo "${active_keys[*]:-}")
           echo "active_gki_keys=$active_gki_keys_csv" >> "$GITHUB_OUTPUT"
 
-          NM_HDR_URL="https://raw.githubusercontent.com/Bouteillepleine/nomount/suite/hookless/src/nomount.h"
+          NM_HDR_URL="https://raw.githubusercontent.com/Bouteillepleine/NoMount-Suite/main/hookless/src/nomount.h"
           nomount_version="unknown"
 
           for attempt in 1 2 3; do
@@ -285,7 +285,7 @@ jobs:
           echo "  ✅ NoMount version: $nomount_version"
 
           if [ "${{ inputs.make_release }}" = "true" ] && [ "$nomount_version" = "unknown" ]; then
-            echo "::error::Could not read NM_MODULE_VERSION from nomount@suite. Cannot proceed with release."
+            echo "::error::Could not read NM_MODULE_VERSION from NoMount-Suite@main. Cannot proceed with release."
             exit 1
           fi
 
@@ -349,7 +349,7 @@ jobs:
             echo "| 🧰 ADIOS · Debug artifacts | ${{ inputs.enable_adios && '✅' || '❌' }} · ${{ inputs.debug && '✅' || '❌' }} |"
             echo ""
             echo ""
-            echo "**NoMount (hookless)** — \`maxsteeel/nomount\`, version \`${{ steps.set-matrix.outputs.nomount_version }}\`"
+            echo "**NoMount (hookless)** — \`Bouteillepleine/NoMount-Suite\`, version \`${{ steps.set-matrix.outputs.nomount_version }}\`"
             echo ""
           } >> "$GITHUB_STEP_SUMMARY"
           
@@ -875,12 +875,12 @@ jobs:
           
           
           
-          MOD_REPO="Bouteillepleine/nomount"
+          MOD_REPO="Bouteillepleine/NoMount-Suite"
           MOD_JSON=$(curl -fsSL -H "Authorization: Bearer $GH_TOKEN" "https://api.github.com/repos/${MOD_REPO}/releases/latest" 2>/dev/null || true)
           MOD_ASSET=$(printf '%s' "$MOD_JSON" | grep -oE '"name": *"00_NoMount-Module-[^"]+\.zip"' | head -1 | sed 's/.*"\(00_NoMount[^"]*\)"/\1/')
           MOD_URL=$(printf '%s' "$MOD_JSON" | grep -oE '"browser_download_url": *"[^"]*/00_NoMount-Module-[^"]+\.zip"' | head -1 | sed 's/.*: *"//; s/"$//')
           if [ -z "$MOD_ASSET" ]; then
-            MOD_VER=$(curl -fsSL "https://raw.githubusercontent.com/${MOD_REPO}/suite/module/module.prop" 2>/dev/null | awk -F= '/^version=/{print $2}')
+            MOD_VER=$(curl -fsSL "https://raw.githubusercontent.com/${MOD_REPO}/main/module/module.prop" 2>/dev/null | awk -F= '/^version=/{print $2}')
             MOD_VER="${MOD_VER:-v1.0.5}"
             MOD_ASSET="00_NoMount-Module-${MOD_VER}.zip"
           fi
@@ -1042,7 +1042,7 @@ jobs:
           
           | Component | Source |
           |-----------|--------|
-          | NoMount (hookless) | [\`maxsteeel/nomount\`](https://github.com/maxsteeel/nomount) |
+          | NoMount (hookless) | [\`Bouteillepleine/NoMount-Suite\`](https://github.com/Bouteillepleine/NoMount-Suite) |
           
           ---
           
@@ -1117,7 +1117,7 @@ jobs:
           
           ## 🙏 Credits
           
-          **KernelSU Next Team**, **NoMount** (maxsteeel & Contributors), **WildKernels**, **OnePlus** (kernel source), and community testers.
+          **KernelSU Next Team**, **NoMount** (Bouteillepleine & Contributors, on maxsteeel's original), **WildKernels**, **OnePlus** (kernel source), and community testers.
           
           EOF
           
