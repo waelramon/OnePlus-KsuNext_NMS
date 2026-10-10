@@ -22,7 +22,7 @@
   "bbr3": true,
   "ttl": true,
   "ip_set": true,
-  "unicode": true,
+  "unicode": false,
   "ntsync": false,
   "blacklist_modules": "",
   "uname": "11-o-gffc54a6d2287",
