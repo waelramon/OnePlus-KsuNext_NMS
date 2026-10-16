@@ -40,10 +40,6 @@ SUSFS comes from KernelSU Next itself now, not from this repo. `ksud` embeds one
 module per KMI, and `ksud susfs autoload enable` loads it on every boot. Check your `ksud`
 has it with `ksud susfs --help`: a recent one lists `load` and `autoload`.
 
-Earlier releases shipped `susfs_guard_lkm.ko` inside each kernel ZIP plus a loader module
-to insmod it; both are gone. The ZIPs carry the kernel only, and nothing here needs
-installing for SUSFS. Skip it and nothing changes.
-
 ---
 
 ## Why NoMount
@@ -179,7 +175,7 @@ Appreciated, never expected.
 - **KernelSU Next** — the root solution
 - **AnyKernel3** by osm0sis and contributors
 - **[WildKernels/OnePlus_KernelSU_SUSFS](https://github.com/WildKernels/OnePlus_KernelSU_SUSFS)** — the excellent OnePlus build framework this is forked from
-- **[inforcqb/susfs4ksu-lkm](https://github.com/inforcqb/susfs4ksu-lkm)** — SUSFS as a loadable module, which is what each kernel here carries
+- **[inforcqb/susfs4ksu-lkm](https://github.com/inforcqb/susfs4ksu-lkm)** — SUSFS as a loadable module, which KernelSU Next now ships
 - **OnePlusOSS** — kernel source
 - Community testers and contributors
 ---
