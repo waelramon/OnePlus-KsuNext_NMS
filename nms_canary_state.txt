@@ -1,0 +1,7 @@
+KernelSU-Next/KernelSU-Next dev b427a3f9c2421a443f961007bfce66b25486643f (KSUN root impl)
+ShirkNeko/SukiSU-Ultra main 29f8b18d08dae3be66c0c3cd364536827df0a378 (SukiSU root impl)
+Baka-SU/BakaSU main d5e9e025b8b49155f8014684d64c91742b465f65 (BakaSU root impl)
+WildKernels/kernel_patches main 56009ac41400532c014e66a77c030ef529bf010e (hooks + susfs, UNPINNED)
+Bouteillepleine/kernel_patches main 58fab3b8922988a51160c52fe4d2ffd741469a9b (our _ghost/_pathhide/_hook)
+Bouteillepleine/NoMount-Suite main 2f7e58fb35cfe278f00e507b32aa60293cdf44f0 (Prism engine src)
+vc-teahouse/Baseband-guard main 028ff7fd509e2104596da7cc1ef8e6ce2a0c9082 (baseband guard)
