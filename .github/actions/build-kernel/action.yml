@@ -116,6 +116,9 @@ outputs:
   ccache_direct_rate:
     description: 'ccache direct hit rate percentage'
     value: ${{ steps.ccache_stats.outputs.direct_rate }}
+  cve_backports:
+    description: 'CVE backport results for this device (applied / already present / n/a)'
+    value: ${{ steps.cve_summary.outputs.summary }}
   zip_name:
     description: 'Name of the generated flashable ZIP'
     value: ${{ steps.create_zip.outputs.zip_name }}
@@ -978,6 +981,37 @@ runs:
     - name: Fix OPlus task_struct KABI slots
       shell: bash
       run: python3 -I "$BOUTEILLE_KERNEL_PATCHES_FOLDER/scripts/fix_oplus_task_struct_kabi.py"
+
+    - name: Apply CVE backports
+      id: cve
+      shell: bash
+      run: |
+        set -euo pipefail
+        D="$BOUTEILLE_KERNEL_PATCHES_FOLDER/common/cve/$KERNEL_VER"
+        [ -d "$D" ] || { echo "no CVE backport series for $KERNEL_VER"; exit 0; }
+        cd "$COMMON_KERNEL_FOLDER"
+        SUB=$(awk '/^SUBLEVEL *=/{print $3; exit}' Makefile)
+        for n in $(ls "$D" | grep -oE '^[0-9]{4}-CVE-[0-9]+-[0-9]+' | sort -u); do
+          r=""
+          for v in "$D/$n.patch" "$D/$n".v*.patch; do
+            [ -f "$v" ] || continue
+            if patch -p1 -R --dry-run -s -f -F0 < "$v" >/dev/null 2>&1; then r="already present"; break; fi
+            if patch -p1 --dry-run -s -f -F0 < "$v" >/dev/null 2>&1; then
+              patch -p1 -s -f -F0 --no-backup-if-mismatch < "$v"; r="applied $(basename "$v")"; break
+            fi
+          done
+          if [ -z "$r" ]; then
+            while IFS='|' read -r p f kind re; do
+              [ "$p" = "$n" ] || continue
+              if [ "$kind" = fixed ] && grep -qP -- "$re" "$f"; then r="already present (marker)"; break; fi
+              if [ "$kind" = requires ] && ! grep -qP -- "$re" "$f"; then r="not applicable"; break; fi
+              if [ "$kind" = minsub ] && [ "$SUB" -lt "$re" ]; then r="not applicable (< .$re)"; break; fi
+            done < "$D/markers"
+          fi
+          [ -n "$r" ] || { echo "::error::$n does not apply to this tree"; exit 1; }
+          echo "$n: $r"
+          printf '%s\t%s\t%s\n' "${n#*-}" "$r" "$(sed -n 's/^Subject: //p' "$D/$n.patch" | head -1)" >> "$RUNNER_TEMP/cve_results.txt"
+        done
 
     - name: Drop the unbuildable wl2868c regulator
       shell: bash
@@ -2225,6 +2259,73 @@ runs:
           patch -p1 < "$DEBLOAT_PATCH"
         fi
 
+    - name: Apply CVE-2026-43499 rtmutex fix
+      if: ${{ env.KERNEL_VER == '6.12' }}
+      shell: bash
+      run: |
+        set -euo pipefail
+        CVE="$BOUTEILLE_KERNEL_PATCHES_FOLDER/common/cve"
+        cd "$COMMON_KERNEL_FOLDER"
+        RT=kernel/locking/rtmutex.c
+        if ! grep -q 'waiter_task' "$RT"; then
+          P="$CVE/cve-2026-43499-rtmutex-full.patch"
+        elif ! grep -q 'never enqueued' "$RT"; then
+          P="$CVE/cve-2026-43499-rtmutex-followup.patch"
+        else
+          echo "rtmutex already carries the full CVE-2026-43499 fix"
+          printf 'CVE-2026-43499\talready present\trtmutex: Use waiter::task instead of current in remove_waiter()\n' >> "$RUNNER_TEMP/cve_results.txt"
+          exit 0
+        fi
+        echo "Applying $(basename "$P")"
+        patch -p1 --no-backup-if-mismatch < "$P"
+        grep -q 'never enqueued' "$RT" && grep -q 'unlikely(ret < 0)' kernel/locking/rtmutex_api.c
+        printf 'CVE-2026-43499\tapplied %s\trtmutex: Use waiter::task instead of current in remove_waiter()\n' "$(basename "$P")" >> "$RUNNER_TEMP/cve_results.txt"
+
+    - name: Summarize CVE backports
+      id: cve_summary
+      shell: bash
+      run: |
+        F="$RUNNER_TEMP/cve_results.txt"
+        if [ ! -s "$F" ]; then
+          s="none for ${KERNEL_VER}"
+        else
+          a=$(awk -F'\t' '$2 ~ /^applied/' "$F" | wc -l)
+          p=$(awk -F'\t' '$2 ~ /^already present/' "$F" | wc -l)
+          n=$(awk -F'\t' '$2 ~ /^not applicable/' "$F" | wc -l)
+          s="${a} applied · ${p} already present · ${n} n/a"
+        fi
+        echo "summary=$s" >> "$GITHUB_OUTPUT"
+        echo "CVE_SUMMARY=$s" >> "$GITHUB_ENV"
+        echo "CVE backports: $s"
+
+    - name: Embed inte overlay module
+      shell: bash
+      run: |
+        set -euo pipefail
+        MODDIR="$BOUTEILLE_KERNEL_PATCHES_FOLDER/oneplus/module_overlay"
+        KO="$MODDIR/modules/inte_${ANDROID_VER}-${KERNEL_VER}.ko"
+        PATCHFILE="$MODDIR/0001-module-Add-module-intercept-and-overlay-mechanism-${ANDROID_VER}-${KERNEL_VER}.patch"
+        if [ ! -f "$KO" ]; then
+          echo "No committed inte.ko for ${ANDROID_VER}-${KERNEL_VER}; skipping module_overlay embed."
+          exit 0
+        fi
+        if [ ! -f "$PATCHFILE" ]; then
+          echo "::error::inte.ko present but module_overlay patch missing: $PATCHFILE"
+          exit 1
+        fi
+        missing=()
+        for t in zstd xxd; do command -v "$t" >/dev/null 2>&1 || missing+=("$t"); done
+        if [ ${#missing[@]} -gt 0 ]; then
+          sudo apt-get update -qq && sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq "${missing[@]}"
+        fi
+        cd "$COMMON_KERNEL_FOLDER"
+        echo "Applying module_overlay patch: $(basename "$PATCHFILE")"
+        patch -p1 < "$PATCHFILE"
+        mkdir -p "$COMMON_KERNEL_FOLDER/kernel/module/module_overlay/modules"
+        cp "$KO" "$COMMON_KERNEL_FOLDER/kernel/module/module_overlay/modules/inte.ko"
+        echo "INTE_OVERLAY_EMBEDDED=1" >> "$GITHUB_ENV"
+        echo "✅ embedded $(basename "$KO") as kernel/module/module_overlay/modules/inte.ko"
+
     - name: 🧠 Apply BORE scheduler
       shell: bash
       if: ${{ inputs.enable_bore == true || inputs.enable_bore == 'true' }}
@@ -2869,7 +2970,10 @@ runs:
           
           ls -la "$DEBUG_ARTIFACTS_FOLDER"
         else
-          make LD="$COMMON_KERNEL_FOLDER/ld-wrapper" HOSTLD="$COMMON_KERNEL_FOLDER/ld-wrapper" -j"$(nproc --all)" O="$OUT" KCFLAGS="$KCFLAGS" KCPPFLAGS="$KCPPFLAGS" "${AFDO_ARGS[@]}" Image 2>&1 | tee build.log
+          TARGETS=(Image)
+          # inte.ko is an external module: it needs the modules stage (Module.symvers, module.lds)
+          if [ "$KERNEL_VER" == "6.12" ]; then TARGETS+=(modules); fi
+          make LD="$COMMON_KERNEL_FOLDER/ld-wrapper" HOSTLD="$COMMON_KERNEL_FOLDER/ld-wrapper" -j"$(nproc --all)" O="$OUT" KCFLAGS="$KCFLAGS" KCPPFLAGS="$KCPPFLAGS" "${AFDO_ARGS[@]}" "${TARGETS[@]}" 2>&1 | tee build.log
         fi
         
         REAL_CONFIG="$OUT/.config"
@@ -2909,6 +3013,73 @@ runs:
         ccache -s
         echo "============================================"
         echo "::endgroup::"
+
+    - name: Verify inte overlay was baked
+      if: ${{ env.INTE_OVERLAY_EMBEDDED == '1' }}
+      shell: bash
+      run: |
+        set -euo pipefail
+        GEN="$COMMON_KERNEL_FOLDER/out/kernel/module/module_overlay/overlay_files.c"
+        if [ ! -f "$GEN" ] || ! grep -q '\.name = "inte"' "$GEN"; then
+          echo "::error::module_overlay embedded no inte payload ($GEN); kernel would load stock inte"
+          exit 1
+        fi
+        echo "✅ overlay_files.c carries inte ($(grep -c '0x' "$GEN") data lines)"
+
+    - name: Build inte overlay module
+      id: build_inte
+      if: ${{ env.KERNEL_VER == '6.12' }}
+      continue-on-error: true
+      shell: bash
+      run: |
+        set -euo pipefail
+        echo "::group::Build neutered inte.ko (module_overlay payload)"
+        SRC="$BOUTEILLE_KERNEL_PATCHES_FOLDER/oneplus/module_overlay/inte_src"
+        if [ ! -f "$SRC/oplus_kernel_security_check.c" ]; then
+          echo "::error::inte source not found at $SRC"
+          exit 1
+        fi
+        WORK="$RUNNER_TEMP/inte_build"
+        rm -rf "$WORK"; mkdir -p "$WORK"
+        cp "$SRC/oplus_kernel_security_check.c" "$SRC/Kbuild" "$WORK/"
+        export LLVM=1 LLVM_IAS=1
+        export ARCH=arm64 SUBARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu-
+        export AR=llvm-ar NM=llvm-nm OBJCOPY=llvm-objcopy OBJDUMP=llvm-objdump STRIP=llvm-strip
+        export PAHOLE="$KERNEL_PLATFORM_FOLDER/prebuilts/kernel-build-tools/linux-x86/bin/pahole"
+        WRAP="$COMMON_KERNEL_FOLDER/ld-wrapper"
+        OUT="$COMMON_KERNEL_FOLDER/out"
+        # Build Kernel adds the modules target on 6.12, which leaves
+        # Module.symvers + scripts/module.lds; the else branch is a fallback for Image-only trees.
+        if [ -s "$OUT/Module.symvers" ]; then
+          make LD="$WRAP" HOSTLD="$WRAP" -C "$COMMON_KERNEL_FOLDER" O="$OUT" M="$WORK" modules
+        else
+          echo "::warning::no Module.symvers (Image-only tree): preparing module infrastructure"
+          make LD="$WRAP" HOSTLD="$WRAP" -C "$COMMON_KERNEL_FOLDER" O="$OUT" modules_prepare
+          SYMS="$RUNNER_TEMP/inte_base.symvers"
+          cp "$OUT/vmlinux.symvers" "$SYMS"
+          make LD="$WRAP" HOSTLD="$WRAP" -C "$COMMON_KERNEL_FOLDER" O="$OUT" M="$WORK" \
+            KBUILD_EXTRA_SYMBOLS="$SYMS" modules
+        fi
+        if [ ! -f "$WORK/inte.ko" ]; then
+          echo "::error::inte.ko was not produced"
+          exit 1
+        fi
+        OUT_DIR="$GITHUB_WORKSPACE/inte_overlay_out"
+        mkdir -p "$OUT_DIR"
+        OUT_KO="inte_${ANDROID_VER}-${KERNEL_VER}.ko"
+        cp "$WORK/inte.ko" "$OUT_DIR/$OUT_KO"
+        echo "✅ built $OUT_KO ($(stat -c%s "$OUT_DIR/$OUT_KO") bytes)"
+        modinfo "$OUT_DIR/$OUT_KO" 2>/dev/null | grep -iE 'vermagic|^name|depends' || true
+        sha256sum "$OUT_DIR/$OUT_KO"
+        echo "::endgroup::"
+
+    - name: Upload inte overlay module
+      if: ${{ steps.build_inte.outcome == 'success' && (inputs.debug == true || inputs.debug == 'true') }}
+      uses: actions/upload-artifact@v7
+      with:
+        name: inte-overlay-${{ env.ANDROID_VER }}-${{ env.KERNEL_VER }}-${{ env.OP_MODEL }}
+        path: ${{ github.workspace }}/inte_overlay_out/inte_${{ env.ANDROID_VER }}-${{ env.KERNEL_VER }}.ko
+        if-no-files-found: error
 
     - name: 📊 ccache Post-Build Statistics
       id: ccache_stats
@@ -3138,6 +3309,12 @@ runs:
           echo "NTSync: ${{ env.OP_NTSYNC }}"
           echo "Droidspaces: ${{ env.OP_DS }}"
           echo "config.gz: ${{ env.STOCK_CONFIG_SPOOF }}"
+          echo ""
+          echo "=== CVE backports ==="
+          echo "${CVE_SUMMARY:-none}"
+          if [ -s "$RUNNER_TEMP/cve_results.txt" ]; then
+            awk -F'\t' '{printf "  %-16s %-28s %s\n", $1, $2, $3}' "$RUNNER_TEMP/cve_results.txt"
+          fi
           echo ""
           echo "Image SHA256: ${{ steps.collect_stats.outputs.image_sha256 }}"
           echo "AnyKernel3 ZIP SHA256: ${{ steps.create_zip.outputs.zip_sha256 }}"
